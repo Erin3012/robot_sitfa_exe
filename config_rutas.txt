@@ -1,0 +1,7 @@
+C:/Users/local1/Downloads
+C:/Users/local1/Desktop
+robot_sitfa_alertas_99
+http://www.familia.pjud/SITFAWEB/jsp/BandejaKO/BandejaJuezFirma.html#lstTramitesAuto
+liq_rmv
+manual
+0
