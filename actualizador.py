@@ -84,7 +84,7 @@ class VentanaActualizacion:
 
         pie = Canvas(self.root, width=560, height=58, bg="#f3f6fb", highlightthickness=0)
         pie.pack()
-        for x, titulo, texto in ((0, "Seguro", "Datos protegidos"), (190, "Confiable", "Actualizaciones oficiales"), (380, "Servicio actualizado")):
+        for x, titulo, texto in ((0, "Seguro", "Datos protegidos"), (190, "Confiable", "Actualizaciones oficiales"), (380, "Siempre contigo", "Servicio actualizado")):
             pie.create_rectangle(x, 0, x + 175, 54, fill="#ffffff", outline="#dce6f2")
             pie.create_text(x + 16, 18, text="●", fill="#1677d2", font=("Segoe UI", 12, "bold"))
             pie.create_text(x + 37, 17, text=titulo, anchor="w", fill="#17365d", font=("Segoe UI", 9, "bold"))
