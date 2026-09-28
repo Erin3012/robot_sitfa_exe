@@ -102,7 +102,9 @@ class SitfaPlaywrightSession:
         launch_kwargs = {
             "headless": not RobotConfig.navegador_visible,
             "accept_downloads": True,
-            "args": launch_args if RobotConfig.navegador_visible else [],
+            # Los argumentos de seguridad deben aplicarse también en modo
+            # headless; antes se descartaban cuando el navegador era invisible.
+            "args": launch_args,
         }
         if RobotConfig.navegador_visible:
             launch_kwargs["no_viewport"] = True
