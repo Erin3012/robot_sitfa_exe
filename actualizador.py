@@ -41,8 +41,8 @@ class VentanaActualizacion:
         self.mensaje_index = 0
         self.proximo_mensaje = self.inicio
         self.progreso_actual = 0
-        self.root.title("Robot SITFA - Actualizacion del sistema")
-        self.root.geometry("640x390")
+        self.root.title("Robot SITFA")
+        self.root.geometry("640x310")
         self.root.resizable(False, False)
         self.root.configure(bg="#f3f6fb")
         self.root.protocol("WM_DELETE_WINDOW", self._bloquear_cierre)
@@ -52,15 +52,14 @@ class VentanaActualizacion:
         alto = self.root.winfo_screenheight()
 
         x = (ancho - 640) // 2
-        y = (alto - 390) // 2
-        self.root.geometry(f"640x390+{x}+{y}")
+        y = (alto - 310) // 2
+        self.root.geometry(f"640x310+{x}+{y}")
 
         encabezado = Canvas(self.root, width=640, height=106, bg="#ffffff", highlightthickness=0)
         encabezado.pack(fill="x")
         encabezado.create_polygon(32, 30, 50, 20, 68, 30, 68, 51, 50, 61, 32, 51, fill="#0b74c9", outline="")
         encabezado.create_text(50, 41, text="S", fill="#ffffff", font=("Segoe UI", 19, "bold"))
         encabezado.create_text(86, 35, text="SITFA", anchor="w", fill="#17365d", font=("Segoe UI", 24, "bold"))
-        encabezado.create_text(87, 67, text="Sistemas inteligentes para tu futuro", anchor="w", fill="#71819a", font=("Segoe UI", 9))
         encabezado.create_text(595, 35, text=f"v{APP_VERSION}", anchor="e", fill="#17365d", font=("Segoe UI", 10, "bold"))
         encabezado.create_text(595, 64, text="ACTUALIZACION", anchor="e", fill="#0b74c9", font=("Segoe UI", 8, "bold"))
 
@@ -80,10 +79,10 @@ class VentanaActualizacion:
         self.porcentaje.place(x=535, y=101, anchor="e")
 
         self.detalle = Label(self.root, text=f"Version instalada: v{APP_VERSION}   |   No cierres la aplicacion durante el proceso", bg="#f3f6fb", fg="#60738e", font=("Segoe UI", 9))
-        self.detalle.pack(pady=(10, 8))
+        self.detalle.pack(pady=(10, 0))
 
         pie = Canvas(self.root, width=560, height=58, bg="#f3f6fb", highlightthickness=0)
-        pie.pack()
+        pie.pack_forget()
         for x, titulo, texto in ((0, "Seguro", "Datos protegidos"), (190, "Confiable", "Actualizaciones oficiales"), (380, "Siempre contigo", "Servicio actualizado")):
             pie.create_rectangle(x, 0, x + 175, 54, fill="#ffffff", outline="#dce6f2")
             pie.create_text(x + 16, 18, text="●", fill="#1677d2", font=("Segoe UI", 12, "bold"))
