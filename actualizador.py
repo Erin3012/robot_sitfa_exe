@@ -16,6 +16,7 @@ REPOSITORIO = "Erin3012/robot_sitfa_exe"
 API_RELEASE_LATEST = f"https://api.github.com/repos/{REPOSITORIO}/releases/latest"
 MINIMO_EXE_BYTES = 100 * 1024
 TIEMPO_MINIMO_ACTUALIZADOR = 10.0
+INTERVALO_MENSAJE = 1.5
 MENSAJES_LANZAMIENTO = (
     "Inicializando nucleo de actualizacion",
     "Contactando con el servidor de misiones",
@@ -38,6 +39,7 @@ class VentanaActualizacion:
         self.root = Tk()
         self.inicio = time.monotonic()
         self.mensaje_index = 0
+        self.proximo_mensaje = self.inicio
         self.progreso_actual = 0
         self.root.title("Robot SITFA - Actualizacion del sistema")
         self.root.geometry("640x390")
@@ -60,7 +62,7 @@ class VentanaActualizacion:
         encabezado.create_text(86, 35, text="SITFA", anchor="w", fill="#17365d", font=("Segoe UI", 24, "bold"))
         encabezado.create_text(87, 67, text="Sistemas inteligentes para tu futuro", anchor="w", fill="#71819a", font=("Segoe UI", 9))
         encabezado.create_text(595, 35, text=f"v{APP_VERSION}", anchor="e", fill="#17365d", font=("Segoe UI", 10, "bold"))
-        encabezado.create_text(595, 64, text="ACTUALIZACION SEGURA", anchor="e", fill="#0b74c9", font=("Segoe UI", 8, "bold"))
+        encabezado.create_text(595, 64, text="ACTUALIZACION", anchor="e", fill="#0b74c9", font=("Segoe UI", 8, "bold"))
 
         tarjeta = Canvas(self.root, width=560, height=143, bg="#ffffff", highlightthickness=1, highlightbackground="#dce6f2")
         tarjeta.pack(pady=(18, 0))
@@ -82,7 +84,7 @@ class VentanaActualizacion:
 
         pie = Canvas(self.root, width=560, height=58, bg="#f3f6fb", highlightthickness=0)
         pie.pack()
-        for x, titulo, texto in ((0, "Seguro", "Datos protegidos"), (190, "Confiable", "Actualizaciones oficiales"), (380, "Siempre contigo", "Servicio actualizado")):
+        for x, titulo, texto in ((0, "Seguro", "Datos protegidos"), (190, "Confiable", "Actualizaciones oficiales"), (380, "Servicio actualizado")):
             pie.create_rectangle(x, 0, x + 175, 54, fill="#ffffff", outline="#dce6f2")
             pie.create_text(x + 16, 18, text="●", fill="#1677d2", font=("Segoe UI", 12, "bold"))
             pie.create_text(x + 37, 17, text=titulo, anchor="w", fill="#17365d", font=("Segoe UI", 9, "bold"))
@@ -96,16 +98,22 @@ class VentanaActualizacion:
         self.estado.configure(text=texto)
         self.root.update_idletasks()
 
+    def mensaje_rotativo(self):
+        ahora = time.monotonic()
+        if ahora < self.proximo_mensaje:
+            return
+        self.mensaje(MENSAJES_LANZAMIENTO[self.mensaje_index % len(MENSAJES_LANZAMIENTO)])
+        self.mensaje_index += 1
+        self.proximo_mensaje = ahora + INTERVALO_MENSAJE
+
     def avance(self, actual, total):
         if total > 0:
             porcentaje_descarga = min(100, int(actual * 100 / total))
             self.set_progress(20 + int(porcentaje_descarga * 0.70))
-            self.mensaje(MENSAJES_LANZAMIENTO[self.mensaje_index % len(MENSAJES_LANZAMIENTO)])
-            self.mensaje_index += 1
+            self.mensaje_rotativo()
         else:
             self.set_progress(min(20, self.progreso_actual + 1))
-            self.mensaje(MENSAJES_LANZAMIENTO[self.mensaje_index % len(MENSAJES_LANZAMIENTO)])
-            self.mensaje_index += 1
+            self.mensaje_rotativo()
         self.root.update_idletasks()
 
     def set_progress(self, porcentaje):
@@ -120,8 +128,7 @@ class VentanaActualizacion:
             transcurrido = time.monotonic() - self.inicio
             progreso_minimo = int(min(100, (transcurrido / TIEMPO_MINIMO_ACTUALIZADOR) * 100))
             self.set_progress(max(self.progreso_actual, progreso_minimo))
-            self.mensaje(MENSAJES_LANZAMIENTO[self.mensaje_index % len(MENSAJES_LANZAMIENTO)])
-            self.mensaje_index += 1
+            self.mensaje_rotativo()
             time.sleep(0.25)
         self.set_progress(100)
 
