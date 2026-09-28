@@ -39,34 +39,54 @@ class VentanaActualizacion:
         self.inicio = time.monotonic()
         self.mensaje_index = 0
         self.progreso_actual = 0
-        self.root.title("Robot SITFA // Actualizador")
-        self.root.geometry("620x315")
+        self.root.title("Robot SITFA - Actualizacion del sistema")
+        self.root.geometry("640x390")
         self.root.resizable(False, False)
-        self.root.configure(bg="#0b1020")
+        self.root.configure(bg="#f3f6fb")
         self.root.protocol("WM_DELETE_WINDOW", self._bloquear_cierre)
 
         self.root.update_idletasks()
         ancho = self.root.winfo_screenwidth()
         alto = self.root.winfo_screenheight()
-        x = (ancho - 620) // 2
-        y = (alto - 315) // 2
-        self.root.geometry(f"620x315+{x}+{y}")
 
-        Label(self.root, text="ROBOT SITFA", bg="#0b1020", fg="#62e6ff", font=("Segoe UI", 25, "bold")).pack(pady=(28, 0))
-        Label(self.root, text="SISTEMA DE ACTUALIZACION OBLIGATORIA", bg="#0b1020", fg="#7f8eaa", font=("Segoe UI", 9, "bold")).pack(pady=(2, 20))
+        x = (ancho - 640) // 2
+        y = (alto - 390) // 2
+        self.root.geometry(f"640x390+{x}+{y}")
 
-        self.estado = Label(self.root, text="Inicializando nucleo de actualizacion", bg="#0b1020", fg="#f5f7ff", font=("Consolas", 12))
-        self.estado.pack(pady=(0, 13))
+        encabezado = Canvas(self.root, width=640, height=106, bg="#ffffff", highlightthickness=0)
+        encabezado.pack(fill="x")
+        encabezado.create_polygon(32, 30, 50, 20, 68, 30, 68, 51, 50, 61, 32, 51, fill="#0b74c9", outline="")
+        encabezado.create_text(50, 41, text="S", fill="#ffffff", font=("Segoe UI", 19, "bold"))
+        encabezado.create_text(86, 35, text="SITFA", anchor="w", fill="#17365d", font=("Segoe UI", 24, "bold"))
+        encabezado.create_text(87, 67, text="Sistemas inteligentes para tu futuro", anchor="w", fill="#71819a", font=("Segoe UI", 9))
+        encabezado.create_text(595, 35, text=f"v{APP_VERSION}", anchor="e", fill="#17365d", font=("Segoe UI", 10, "bold"))
+        encabezado.create_text(595, 64, text="ACTUALIZACION SEGURA", anchor="e", fill="#0b74c9", font=("Segoe UI", 8, "bold"))
 
-        self.lienzo = Canvas(self.root, width=540, height=20, bg="#0b1020", highlightthickness=0)
-        self.lienzo.pack()
-        self.lienzo.create_rectangle(0, 2, 540, 18, fill="#202b45", outline="")
-        self.barra = self.lienzo.create_rectangle(0, 2, 0, 18, fill="#31d6c6", outline="")
+        tarjeta = Canvas(self.root, width=560, height=143, bg="#ffffff", highlightthickness=1, highlightbackground="#dce6f2")
+        tarjeta.pack(pady=(18, 0))
+        tarjeta.create_oval(25, 26, 73, 74, fill="#dceefe", outline="")
+        tarjeta.create_text(49, 50, text="↻", fill="#0b74c9", font=("Segoe UI", 25, "bold"))
+        tarjeta.create_text(92, 35, text="Actualizacion del sistema", anchor="w", fill="#17365d", font=("Segoe UI", 14, "bold"))
+        self.estado = Label(tarjeta, text="Inicializando nucleo de actualizacion", bg="#ffffff", fg="#60738e", font=("Segoe UI", 10))
+        self.estado.place(x=92, y=59, anchor="w")
 
-        self.porcentaje = Label(self.root, text="0%", bg="#0b1020", fg="#31d6c6", font=("Consolas", 16, "bold"))
-        self.porcentaje.pack(pady=(10, 4))
-        self.detalle = Label(self.root, text=f"Version instalada: v{APP_VERSION}   |   No cierres esta ventana", bg="#0b1020", fg="#657491", font=("Segoe UI", 9))
-        self.detalle.pack()
+        self.lienzo = Canvas(tarjeta, width=430, height=20, bg="#ffffff", highlightthickness=0)
+        self.lienzo.place(x=92, y=92)
+        self.lienzo.create_rectangle(0, 2, 430, 18, fill="#e4ebf4", outline="")
+        self.barra = self.lienzo.create_rectangle(0, 2, 0, 18, fill="#1677d2", outline="")
+        self.porcentaje = Label(tarjeta, text="0%", bg="#ffffff", fg="#1677d2", font=("Segoe UI", 11, "bold"))
+        self.porcentaje.place(x=535, y=101, anchor="e")
+
+        self.detalle = Label(self.root, text=f"Version instalada: v{APP_VERSION}   |   No cierres la aplicacion durante el proceso", bg="#f3f6fb", fg="#60738e", font=("Segoe UI", 9))
+        self.detalle.pack(pady=(10, 8))
+
+        pie = Canvas(self.root, width=560, height=58, bg="#f3f6fb", highlightthickness=0)
+        pie.pack()
+        for x, titulo, texto in ((0, "Seguro", "Datos protegidos"), (190, "Confiable", "Actualizaciones oficiales"), (380, "Siempre contigo", "Servicio actualizado")):
+            pie.create_rectangle(x, 0, x + 175, 54, fill="#ffffff", outline="#dce6f2")
+            pie.create_text(x + 16, 18, text="●", fill="#1677d2", font=("Segoe UI", 12, "bold"))
+            pie.create_text(x + 37, 17, text=titulo, anchor="w", fill="#17365d", font=("Segoe UI", 9, "bold"))
+            pie.create_text(x + 37, 36, text=texto, anchor="w", fill="#71819a", font=("Segoe UI", 8))
         self.root.update_idletasks()
 
     def _bloquear_cierre(self):
@@ -90,7 +110,7 @@ class VentanaActualizacion:
 
     def set_progress(self, porcentaje):
         self.progreso_actual = max(0, min(100, int(porcentaje)))
-        ancho = int(540 * self.progreso_actual / 100)
+        ancho = int(430 * self.progreso_actual / 100)
         self.lienzo.coords(self.barra, 0, 2, ancho, 18)
         self.porcentaje.configure(text=f"{self.progreso_actual}%")
         self.root.update_idletasks()
