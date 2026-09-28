@@ -13,6 +13,7 @@ import re
 from gui_analisis import VentanaAnalisis # Importas el archivo que creaste
 from wsp import enviar_notificacion
 from sitfa_playwright import abrir_sesion_sitfa, PlaywrightSetupError
+from actualizador import verificar_actualizacion_obligatoria
 
 ventana_analisis_instancia = None
 root = None  # Declaramos la variable root aquí arriba
@@ -592,6 +593,8 @@ def iniciar_gui():
     root.mainloop() 
 
 if __name__ == "__main__":
+    if not verificar_actualizacion_obligatoria():
+        sys.exit(0)
     cargar_configuracion()
     iniciar_gui()
 

@@ -1,0 +1,12 @@
+customtkinter
+PyMuPDF
+Pillow
+pandas
+pdfplumber
+pyautogui
+pywin32
+python-dateutil
+requests
+playwright
+PyInstaller
+

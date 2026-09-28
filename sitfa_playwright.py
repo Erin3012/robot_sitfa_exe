@@ -3,6 +3,7 @@ import re
 import time
 import base64
 import csv
+import json
 from tkinter import messagebox
 
 from playwright.sync_api import Error as PlaywrightError
@@ -22,6 +23,45 @@ BANDEJA_SELECTORES = {
     "auto": ["#lstTramitesAuto", "#lstTramitesAutomaticos", "[id*='TramitesAuto']"],
     "manual": ["#lstTramites", "#lstTramitesManual", "#lstTramitesManuales", "[id*='TramitesManual']", "[id*='TramitesManuales']"],
 }
+
+# Excepción equivalente a agregar el sitio en:
+# edge://settings/content/insecureContent
+SITIO_CONTENIDO_NO_SEGURO = "https://familia.pjud.cl"
+
+
+def configurar_contenido_no_seguro_edge(user_data_dir):
+    """Permite contenido no seguro únicamente para el sitio SITFA en el perfil de Edge."""
+    preferencias_dir = os.path.join(user_data_dir, "Default")
+    preferencias_path = os.path.join(preferencias_dir, "Preferences")
+    os.makedirs(preferencias_dir, exist_ok=True)
+
+    preferencias = {}
+    if os.path.exists(preferencias_path):
+        try:
+            with open(preferencias_path, "r", encoding="utf-8") as archivo:
+                preferencias = json.load(archivo)
+        except (OSError, json.JSONDecodeError) as error:
+            log(f"No se pudieron leer las preferencias de Edge: {error}")
+            return
+
+    excepciones = (
+        preferencias.setdefault("profile", {})
+        .setdefault("content_settings", {})
+        .setdefault("exceptions", {})
+        .setdefault("insecure_content", {})
+    )
+    excepciones[f"{SITIO_CONTENIDO_NO_SEGURO},*"] = {
+        "setting": 1,
+        # Edge espera una marca de tiempo Unix en milisegundos para mostrar
+        # correctamente la excepción en edge://settings.
+        "last_modified": str(int(time.time() * 1000)),
+    }
+
+    try:
+        with open(preferencias_path, "w", encoding="utf-8") as archivo:
+            json.dump(preferencias, archivo, ensure_ascii=False)
+    except OSError as error:
+        log(f"No se pudieron guardar las preferencias de Edge: {error}")
 
 
 class PlaywrightSetupError(Exception):
@@ -49,10 +89,15 @@ class SitfaPlaywrightSession:
         self._pw = sync_playwright().start()
         user_data_dir = utils.obtener_ruta_externa("playwright_user_data")
         os.makedirs(user_data_dir, exist_ok=True)
+        configurar_contenido_no_seguro_edge(user_data_dir)
 
         launch_args = [
             "--start-maximized",
             "--disable-features=msEdgeSidebarV2",
+            # La política corporativa de Edge puede ignorar las excepciones
+            # guardadas en Preferences. Este permiso aplica solo a la
+            # instancia de Edge controlada por el robot.
+            "--allow-running-insecure-content",
         ]
         launch_kwargs = {
             "headless": not RobotConfig.navegador_visible,

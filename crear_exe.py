@@ -1,72 +1,69 @@
+import os
+import re
+
 import PyInstaller.__main__
 import customtkinter
-import os
 
-# --- LÓGICA DE AUTOINCREMENTO DE VERSIÓN ---
-archivo_version = 'build_version.txt'
 
-if os.path.exists(archivo_version):
-    with open(archivo_version, 'r') as f:
-        try:
-            version = int(f.read().strip())
-        except ValueError:
-            version = 0
+ARCHIVO_VERSION = "build_version.txt"
+VERSION_FORZADA = os.environ.get("SITFA_RELEASE_VERSION", "").strip()
+
+if VERSION_FORZADA:
+    if not re.fullmatch(r"\d+", VERSION_FORZADA):
+        raise ValueError("SITFA_RELEASE_VERSION debe ser un numero, por ejemplo 9")
+    version = int(VERSION_FORZADA)
+elif os.path.exists(ARCHIVO_VERSION):
+    try:
+        with open(ARCHIVO_VERSION, "r", encoding="utf-8") as archivo:
+            version = int(archivo.read().strip()) + 1
+    except ValueError:
+        version = 1
 else:
-    version = 0
+    version = 1
 
-version += 1
+with open(ARCHIVO_VERSION, "w", encoding="utf-8") as archivo:
+    archivo.write(str(version))
 
-with open(archivo_version, 'w') as f:
-    f.write(str(version))
+with open("version.py", "w", encoding="utf-8") as archivo:
+    archivo.write('"""Version generada durante el build."""\n')
+    archivo.write(f"APP_VERSION = {version}\n")
 
-nombre_exe = f'Robot_SITFA_v{version}'
-# -------------------------------------------
-
-# 1. Obtener la ruta de instalación de customtkinter para incluir sus recursos
+nombre_exe = f"Robot_SITFA_v{version}"
 ctk_path = os.path.dirname(customtkinter.__file__)
+sep = ";" if os.name == "nt" else ":"
 
-# 2. Definir separador de sistema (Windows usa ';')
-sep = ';' if os.name == 'nt' else ':'
+print(f"Iniciando proceso de empaquetado de {nombre_exe}...")
 
-print(f"🚀 Iniciando proceso de empaquetado de {nombre_exe}...")
-
-# 3. Configuración de PyInstaller
 PyInstaller.__main__.run([
-    'main.py',                       # Tu script principal
-    f'--name={nombre_exe}',          # Nombre del archivo final .exe
-    '--onefile',                     # Empaquetar todo en un solo archivo
-    '--windowed',                    # No mostrar consola negra (GUI mode)
-    '--icon=robot.ico',              # Icono de la aplicación
-    
-    # -- INCLUSIÓN DE ARCHIVOS Y CARPETAS --
-    
-    # CustomTkinter (Necesario para que la interfaz se vea bien)
-    f'--add-data={ctk_path}{sep}customtkinter/',
-    
-    # Archivos de recursos del proyecto
-    f'--add-data=filtros.json{sep}.',
-    f'--add-data=robot.ico{sep}.',
-    
-    # Incluimos config_rutas.txt si existe, para tener una configuración base
-    # (Si no existe, el script funcionará igual pero el usuario deberá configurar rutas al abrir)
-    # f'--add-data=config_rutas.txt{sep}.', 
-    
-    # -- OPCIONES DE LIMPIEZA Y OPTIMIZACIÓN --
-    '--clean',                       # Limpiar caché de compilaciones previas
-    '--noconfirm',                   # Sobrescribir sin preguntar
-    
-    # -- IMPORTS OCULTOS (A veces necesarios para win32 o pandas) --
-    '--hidden-import=babel.numbers',
-    '--hidden-import=win32timezone',
-    '--hidden-import=win32gui',
-    '--hidden-import=playwright.sync_api',
-    '--hidden-import=greenlet',
-    '--hidden-import=fitz',
-    '--hidden-import=pymupdf',
-    '--collect-all=fitz',
-    '--collect-all=pymupdf',
-    '--hidden-import=PIL._tkinter_finder',
+    "updater_helper.py",
+    "--name=updater_helper",
+    "--onefile",
+    "--windowed",
+    "--clean",
+    "--noconfirm",
 ])
 
-print("\n✅ ¡Proceso finalizado con éxito!")
-print(f"Busca tu ejecutable en la carpeta: {os.path.join(os.getcwd(), 'dist')}")
+PyInstaller.__main__.run([
+    "main.py",
+    f"--name={nombre_exe}",
+    "--onefile",
+    "--windowed",
+    "--icon=robot.ico",
+    f"--add-data={ctk_path}{sep}customtkinter/",
+    f"--add-data=filtros.json{sep}.",
+    f"--add-data=robot.ico{sep}.",
+    "--clean",
+    "--noconfirm",
+    "--hidden-import=win32timezone",
+    "--hidden-import=win32gui",
+    "--hidden-import=playwright.sync_api",
+    "--hidden-import=greenlet",
+    "--hidden-import=fitz",
+    "--hidden-import=pymupdf",
+    "--collect-all=fitz",
+    "--collect-all=pymupdf",
+    "--hidden-import=PIL._tkinter_finder",
+])
+
+print("Proceso finalizado con exito.")
+print(f"Busca los ejecutables en: {os.path.join(os.getcwd(), 'dist')}")
