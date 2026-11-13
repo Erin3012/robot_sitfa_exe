@@ -15,6 +15,8 @@ from wsp import enviar_notificacion
 from sitfa_playwright import abrir_sesion_sitfa, PlaywrightSetupError
 from actualizador import verificar_actualizacion_obligatoria
 
+OBSERVACION_REFERENCIA_PREDETERMINADA = "Liquidación Auto. UTM"
+
 ventana_analisis_instancia = None
 root = None  # Declaramos la variable root aquí arriba
 
@@ -274,7 +276,10 @@ def _ejecutar_parte_2_worker(ruta_csv):
         pendientes = {
             row.RIT: (row.Estado, row.Observacion)
             for row in df.itertuples(index=False)
-            if row.RIT and (row.Estado == "Ok" or (row.Estado == "Revisar" and row.Observacion))
+            if row.RIT and (
+                row.Estado == "Revisar"
+                or row.Estado == "Ok"
+            )
         }
     except Exception as e:
         log(f"No se pudo leer el CSV: {e}")
@@ -302,18 +307,27 @@ def _ejecutar_parte_2_worker(ruta_csv):
                         break
                     if rit_web in pendientes:
                         estado_causa, observacion = pendientes[rit_web]
-                        if estado_causa == "Revisar":
+                        cambiar_referencia = bool(
+                            observacion
+                            and observacion.casefold() != OBSERVACION_REFERENCIA_PREDETERMINADA.casefold()
+                        )
+                        if cambiar_referencia:
                             if not sitfa.actualizar_referencia_por_rit(rit_web, observacion):
                                 errores += 1
-                                log(f"No se pudo actualizar referencia para {rit_web}; no se marcó.")
+                                log(f"No se pudo actualizar la referencia de {rit_web}; se omitió la acción SITFA.")
                                 continue
                             referencias_actualizadas += 1
+
+                        if estado_causa == "Revisar":
+                            log(f"Causa Revisar procesada sin marcar: {rit_web}")
+                            pendientes.pop(rit_web)
+                            continue
 
                         resultado = sitfa.marcar_revisado_por_rit(rit_web)
                         if resultado:
                             marcados += 1
-                            if estado_causa == "Revisar":
-                                log(f"Referencia actualizada y marcado: {rit_web}")
+                            if cambiar_referencia:
+                                log(f"Referencia actualizada y causa Ok marcada: {rit_web}")
                             else:
                                 log(f"Marcado en orden: {rit_web}")
                             pendientes.pop(rit_web)

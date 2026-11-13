@@ -12,6 +12,8 @@ from dateutil.relativedelta import relativedelta
 from collections import Counter
 import utils
 
+OBSERVACION_REFERENCIA_PREDETERMINADA = "Liquidación Auto. UTM"
+
 
 class VisorPDFInterno(ctk.CTkToplevel):
     def __init__(self, parent, ruta_pdf):
@@ -556,7 +558,8 @@ class VentanaAnalisis(ctk.CTkToplevel):
         self.frame_observacion = ctk.CTkFrame(self.frame_cabecera, fg_color="transparent")
         self.frame_observacion.pack(side="left", padx=(0, 20), anchor="w")
         ctk.CTkLabel(self.frame_observacion, text="Observación:", font=("Arial", 10, "bold")).pack(pady=(0, 2), anchor="w")
-        self.txt_observacion = ctk.CTkEntry(self.frame_observacion, font=("Arial", 12), height=40, width=260, placeholder_text="Nota para actualizar referencia")
+        self.txt_observacion = ctk.CTkEntry(self.frame_observacion, font=("Arial", 12), height=40, width=260)
+        self.txt_observacion.insert(0, OBSERVACION_REFERENCIA_PREDETERMINADA)
         self.txt_observacion.pack(anchor="w")
         
         # --- Contenedor para el Último Periodo (01.txt) ---
@@ -1783,7 +1786,7 @@ class VentanaAnalisis(ctk.CTkToplevel):
 
         # 2. Si venimos de un botón (Confirmar/Revisar), actualizamos el diccionario
         if nuevo_estado:
-            observacion = self.txt_observacion.get().strip() if nuevo_estado == "Revisar" else ""
+            observacion = self.txt_observacion.get().strip()
             estado_previo = estados.get(rit_actual, ["", ""])
             estados[rit_actual] = [nuevo_estado, observacion if observacion else estado_previo[1]]
             try:
@@ -1800,7 +1803,7 @@ class VentanaAnalisis(ctk.CTkToplevel):
         self.txt_estado.delete(0, "end")
         self.txt_estado.insert(0, estado_actual)
         self.txt_observacion.delete(0, "end")
-        self.txt_observacion.insert(0, observacion_actual)
+        self.txt_observacion.insert(0, observacion_actual or OBSERVACION_REFERENCIA_PREDETERMINADA)
         
         # Color visual opcional según el estado
         if estado_actual == "Ok":
