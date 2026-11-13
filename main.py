@@ -267,14 +267,23 @@ def ejecutar_parte_1():
 def _ejecutar_parte_2_worker(ruta_csv):
     RobotConfig.detener_solicitado = False
     try:
-        df = pd.read_csv(ruta_csv, sep=';', header=None, names=["RIT", "Estado"], dtype=str)
-        pendientes = df[df["Estado"].str.strip() == "Ok"]["RIT"].str.strip().tolist()
+        df = pd.read_csv(ruta_csv, sep=';', header=None, names=["RIT", "Estado", "Observacion"], dtype=str, keep_default_na=False)
+        df["Estado"] = df["Estado"].str.strip()
+        df["RIT"] = df["RIT"].str.strip()
+        df["Observacion"] = df["Observacion"].str.strip()
+        pendientes = {
+            row.RIT: (row.Estado, row.Observacion)
+            for row in df.itertuples(index=False)
+            if row.RIT and (row.Estado == "Ok" or (row.Estado == "Revisar" and row.Observacion))
+        }
     except Exception as e:
         log(f"No se pudo leer el CSV: {e}")
         return
 
     log("Iniciando Parte 2 con Playwright...")
     marcados = 0
+    referencias_actualizadas = 0
+    errores = 0
 
     try:
         with abrir_sesion_sitfa(parent=root) as sitfa:
@@ -292,11 +301,25 @@ def _ejecutar_parte_2_worker(ruta_csv):
                     if RobotConfig.detener_solicitado:
                         break
                     if rit_web in pendientes:
+                        estado_causa, observacion = pendientes[rit_web]
+                        if estado_causa == "Revisar":
+                            if not sitfa.actualizar_referencia_por_rit(rit_web, observacion):
+                                errores += 1
+                                log(f"No se pudo actualizar referencia para {rit_web}; no se marcó.")
+                                continue
+                            referencias_actualizadas += 1
+
                         resultado = sitfa.marcar_revisado_por_rit(rit_web)
                         if resultado:
                             marcados += 1
-                            log(f"Marcado en orden: {rit_web}")
-                            pendientes.remove(rit_web)
+                            if estado_causa == "Revisar":
+                                log(f"Referencia actualizada y marcado: {rit_web}")
+                            else:
+                                log(f"Marcado en orden: {rit_web}")
+                            pendientes.pop(rit_web)
+                        else:
+                            errores += 1
+                            log(f"No se pudo marcar {rit_web}.")
 
                 if pendientes and not RobotConfig.detener_solicitado:
                     if sitfa.cambiar_pagina():
@@ -317,14 +340,18 @@ def _ejecutar_parte_2_worker(ruta_csv):
         return
 
     estado = "Detenido por el usuario" if RobotConfig.detener_solicitado else "Finalizado correctamente"
-    mensaje_final = f"{estado}. Marcado terminado: {marcados} causas procesadas."
+    mensaje_final = f"{estado}. Referencias actualizadas: {referencias_actualizadas}; causas marcadas: {marcados}; errores: {errores}; pendientes/no encontradas: {len(pendientes)}."
     enviar_notificacion(mensaje_final, topic=RobotConfig.canal_secreto)
     mostrar_info("Proceso Terminado", mensaje_final)
 
 
 def ejecutar_parte_2():
-    ruta_csv = filedialog.askopenfilename(title="Selecciona CSV de Estados", filetypes=[("CSV", "*.csv")])
-    if not ruta_csv:
+    carpeta = filedialog.askdirectory(title="Selecciona carpeta del día con estado_causas.csv")
+    if not carpeta:
+        return
+    ruta_csv = os.path.join(carpeta, "estado_causas.csv")
+    if not os.path.isfile(ruta_csv):
+        messagebox.showerror("Archivo no encontrado", f"No existe el archivo:\n{ruta_csv}")
         return
     ejecutar_en_hilo(_ejecutar_parte_2_worker, ruta_csv)
 

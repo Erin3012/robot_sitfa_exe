@@ -552,6 +552,12 @@ class VentanaAnalisis(ctk.CTkToplevel):
                                         justify="center", height=40, width=100,
                                         placeholder_text="Sin Estado")
         self.txt_estado.pack(anchor="w")
+
+        self.frame_observacion = ctk.CTkFrame(self.frame_cabecera, fg_color="transparent")
+        self.frame_observacion.pack(side="left", padx=(0, 20), anchor="w")
+        ctk.CTkLabel(self.frame_observacion, text="Observación:", font=("Arial", 10, "bold")).pack(pady=(0, 2), anchor="w")
+        self.txt_observacion = ctk.CTkEntry(self.frame_observacion, font=("Arial", 12), height=40, width=260, placeholder_text="Nota para actualizar referencia")
+        self.txt_observacion.pack(anchor="w")
         
         # --- Contenedor para el Último Periodo (01.txt) ---
         self.frame_ultimo_periodo_container = ctk.CTkFrame(self.frame_cabecera, fg_color="transparent")
@@ -1771,25 +1777,30 @@ class VentanaAnalisis(ctk.CTkToplevel):
             try:
                 with open(archivo_maestro, "r", encoding="utf-8") as f:
                     lector = csv.reader(f, delimiter=";")
-                    estados = {fila[0]: fila[1] for fila in lector if len(fila) >= 2}
+                    estados = {fila[0]: [fila[1], fila[2] if len(fila) >= 3 else ""] for fila in lector if len(fila) >= 2}
             except Exception as e:
                 print(f"Error al leer estados: {e}")
 
         # 2. Si venimos de un botón (Confirmar/Revisar), actualizamos el diccionario
         if nuevo_estado:
-            estados[rit_actual] = nuevo_estado
+            observacion = self.txt_observacion.get().strip() if nuevo_estado == "Revisar" else ""
+            estado_previo = estados.get(rit_actual, ["", ""])
+            estados[rit_actual] = [nuevo_estado, observacion if observacion else estado_previo[1]]
             try:
                 with open(archivo_maestro, "w", encoding="utf-8", newline="") as f:
                     escritor = csv.writer(f, delimiter=";")
-                    for rit, est in estados.items():
-                        escritor.writerow([rit, est])
+                    for rit, datos in estados.items():
+                        escritor.writerow([rit, datos[0], datos[1]])
             except Exception as e:
                 print(f"Error al guardar estado: {e}")
 
         # 3. Mostrar el estado en el textbox
-        estado_actual = estados.get(rit_actual, "")
+        estado_datos = estados.get(rit_actual, ["", ""])
+        estado_actual, observacion_actual = estado_datos[0], estado_datos[1]
         self.txt_estado.delete(0, "end")
         self.txt_estado.insert(0, estado_actual)
+        self.txt_observacion.delete(0, "end")
+        self.txt_observacion.insert(0, observacion_actual)
         
         # Color visual opcional según el estado
         if estado_actual == "Ok":

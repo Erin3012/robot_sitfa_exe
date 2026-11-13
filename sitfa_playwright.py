@@ -591,6 +591,130 @@ class SitfaPlaywrightSession:
             log(f"No se pudo marcar {rit}: {e}")
             return False
 
+    def actualizar_referencia_por_rit(self, rit, nueva_referencia):
+        """Edita y verifica la referencia en la bandeja antes de marcar revisado."""
+        fila = self._fila_rit(rit)
+        if not fila:
+            log(f"No se encontró fila para editar referencia: {rit}")
+            return False
+
+        selectores_edicion = [
+            "a[onclick*='modificarReferencia']",
+            "a[onclick*='ModificarReferencia']",
+            "a[onclick*='referencia']",
+            "button[onclick*='referencia']",
+            "a[title*='referencia' i]",
+            "button[title*='referencia' i]",
+            "a[title*='Modificar Referencia']",
+            "button[title*='Modificar Referencia']",
+            "a[onclick*='Referencia']",
+            "button[onclick*='Referencia']",
+            "a:has(i.fa-pencil), a:has(i.fa-pencil-alt), a:has(i.fa-edit)",
+            "a:has(.glyphicon-pencil)",
+            "a:has(img[src*='edit']), a:has(img[src*='lapiz']), a:has(img[src*='pencil'])",
+            "a:has-text('✎')",
+        ]
+        boton = None
+        for selector in selectores_edicion:
+            candidato = fila.locator(selector).first
+            try:
+                if candidato.count() and candidato.is_visible():
+                    boton = candidato
+                    break
+            except PlaywrightError:
+                continue
+        if boton is None:
+            # El diagnóstico del DOM confirmó que el lápiz es un botón icon-only
+            # dentro de la celda cuyo encabezado dice Referencia.
+            try:
+                encabezados = fila.locator("xpath=ancestor::table[1]//thead/tr[last()]/th")
+                if encabezados.count() == 0:
+                    encabezados = fila.locator("xpath=ancestor::table[1]//tr[1]/th")
+                indice_referencia = None
+                for indice in range(encabezados.count()):
+                    texto = (encabezados.nth(indice).inner_text(timeout=1000) or "").strip().lower()
+                    if "referencia" in texto:
+                        indice_referencia = indice
+                        break
+                if indice_referencia is not None:
+                    celda_referencia = fila.locator("td").nth(indice_referencia)
+                    botones = celda_referencia.locator("button, a, [role='button']")
+                    if botones.count() > 0:
+                        boton = botones.last
+            except PlaywrightError as error:
+                log(f"No se pudo ubicar la columna Referencia de {rit}: {error}")
+
+        if boton is None:
+            celdas = fila.locator("td")
+            resumen_controles = []
+            for i in range(celdas.count()):
+                celda = celdas.nth(i)
+                try:
+                    controles = celda.locator("a,button,[role='button'],img")
+                    for j in range(controles.count()):
+                        control = controles.nth(j)
+                        datos = {
+                            "tag": control.evaluate("el => el.tagName.toLowerCase()"),
+                            "title": control.get_attribute("title") or "",
+                            "aria": control.get_attribute("aria-label") or "",
+                            "onclick": control.get_attribute("onclick") or "",
+                            "class": control.get_attribute("class") or "",
+                            "src": control.get_attribute("src") or "",
+                            "href": control.get_attribute("href") or "",
+                            "texto": (control.inner_text(timeout=500) or "").strip()[:40],
+                        }
+                        resumen_controles.append(f"td[{i}] {datos}")
+                        atributos = " ".join(str(datos[campo]) for campo in ("title", "aria", "onclick", "class", "src", "href")).lower()
+                        if any(palabra in atributos for palabra in ("referencia", "pencil", "edit", "lapiz", "editar", "modificar")):
+                            boton = control
+                            break
+                    if boton:
+                        break
+                except PlaywrightError:
+                    continue
+        if boton is None:
+            log(f"Diagnostico controles fila {rit}: {' | '.join(resumen_controles)}")
+            log(f"No se encontró el botón de edición de referencia para {rit}.")
+            return False
+
+        try:
+            boton.click(timeout=10000)
+            self._wait_short()
+            for frame in self._frames():
+                modal = frame.locator(".modal:visible, [role='dialog']:visible").filter(has_text="Modificar Referencia").first
+                if modal.count() == 0:
+                    continue
+                campo = modal.get_by_label("Referencia", exact=False).first
+                if campo.count() == 0:
+                    campo = modal.locator("input[type='text'], textarea").first
+                if campo.count() == 0:
+                    continue
+                campo.fill(nueva_referencia, timeout=5000)
+                guardar = modal.get_by_role("button", name=re.compile("^Guardar$", re.I)).first
+                if guardar.count() == 0:
+                    guardar = modal.locator("button:has-text('Guardar'), input[value='Guardar']").first
+                if guardar.count() == 0:
+                    log(f"No se encontró Guardar en el modal de referencia para {rit}.")
+                    return False
+                guardar.click(timeout=10000)
+                limite = time.time() + 10
+                while time.time() < limite:
+                    try:
+                        if modal.count() == 0 or not modal.is_visible(timeout=250):
+                            fila_actualizada = self._fila_rit(rit)
+                            if fila_actualizada and nueva_referencia in fila_actualizada.inner_text(timeout=2000):
+                                return True
+                    except PlaywrightError:
+                        pass
+                    time.sleep(0.25)
+                log(f"No se confirmó el cambio de referencia de {rit}.")
+                return False
+            log(f"No se abrió el modal Modificar Referencia para {rit}.")
+            return False
+        except PlaywrightError as error:
+            log(f"Error editando referencia para {rit}: {error}")
+            return False
+
     def clicar_boton_litigantes(self, rit):
         fila = self._fila_rit(rit)
         if not fila:
